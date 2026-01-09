@@ -1,3 +1,3 @@
 # ring
 
-a distributed cache server in go
+a distributed cache system with consistent hashing in go
