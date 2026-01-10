@@ -4,8 +4,8 @@ A distributed in-memory cache system built with Go, using consistent hashing for
 
 ## Features
 
-- In-memory key-value storage with TTL support
-- Consistent hashing for even key distribution
+- In-memory key-value cache with TTL support
+- Consistent hashing algorithm for even key distribution
 - HTTP API for cache operations
 - Automatic cleanup of expired keys
 
