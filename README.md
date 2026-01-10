@@ -1,6 +1,6 @@
-# Distributed Cache
+# ring
 
-A simple distributed in-memory cache built with Go, using consistent hashing for key distribution.
+A distributed in-memory cache system built with Go, using consistent hashing for key distribution.
 
 ## Features
 
