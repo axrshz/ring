@@ -1,7 +1,22 @@
+// main.go
 package main
 
-import "fmt"
+import (
+	"flag"
+	"log"
+	"ring/cache"
+	"ring/protocol"
+)
 
 func main() {
-	fmt.Println("Hello world")
+    addr := flag.String("addr", ":8080", "Server address")
+    flag.Parse()
+
+    c := cache.NewCache()
+    server := protocol.NewServer(*addr, c)
+
+    log.Printf("Starting cache node on %s", *addr)
+    if err := server.Start(); err != nil {
+        log.Fatal(err)
+    }
 }
