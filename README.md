@@ -13,7 +13,7 @@ A distributed in-memory cache system built with Go, using consistent hashing for
 
 ```bash
 # Initialize project
-go mod init distributed-cache
+go mod init ring
 go mod tidy
 
 # Start 3 cache nodes (in separate terminals)
