@@ -51,7 +51,3 @@ curl -X DELETE "http://localhost:8080/delete?key=test"
 - **Consistent Hashing**: Distributes keys across nodes with 150 virtual nodes per physical node
 - **Cluster**: Manages node membership
 - **HTTP Protocol**: Simple REST API for operations
-
-## License
-
-MIT
