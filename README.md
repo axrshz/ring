@@ -1,57 +1,85 @@
-# ring
+# ringg
 
-A distributed in-memory cache system built with Go, using consistent hashing for key distribution.
+`ringg` is a beginner-friendly distributed cache project in Go.
 
-## Features
+## Phase 1
 
-- In-memory key-value cache with TTL support
-- Consistent hashing algorithm for even key distribution
-- HTTP API for cache operations
-- Automatic cleanup of expired keys
+Phase 1 is a single-node cache with:
 
-## Quick Start
+- an in-memory key/value store
+- HTTP endpoints for `GET`, `PUT`, and `DELETE`
+- tests for the store and handler
+
+## Phase 2
+
+Phase 2 adds a minimal consistent hash ring:
+
+- add and remove nodes by ID
+- look up which node owns a key
+- tests that show only some keys move when a node joins
+
+This phase is intentionally standalone. The hash ring is not wired into HTTP yet, because that belongs in the next step when we start routing requests between nodes.
+
+## Phase 3
+
+Phase 3 wires the hash ring into the HTTP server:
+
+- every node gets a `node-id`
+- every node starts with the same static cluster map
+- cache requests are forwarded to the owner node when needed
+- `GET /cluster` shows the local node and ring view for debugging
+
+## Phase 4
+
+Phase 4 replaces the fixed cluster config with tracked membership:
+
+- nodes keep a membership table with `alive` and `left` status
+- the ring is rebuilt from the currently alive members
+- `POST /members/join` lets a node announce itself to an existing node
+- `GET /members` shows the current membership snapshot
+
+This phase still does not spread updates automatically. If node A learns about node C, node B will not learn that until we add gossip in the next phase.
+
+## Run
 
 ```bash
-# Initialize project
-go mod init ring
-go mod tidy
-
-# Start 3 cache nodes (in separate terminals)
-go run main.go -addr=:8080
-go run main.go -addr=:8081
-go run main.go -addr=:8082
+go run ./cmd/node -addr :8080 -node-id node-a -advertise-addr http://localhost:8080
 ```
 
-## Usage
-
-### Run Tests
+## Try It
 
 ```bash
-go run test_client.go
+curl -X PUT http://localhost:8080/cache/name --data "ringg"
+curl http://localhost:8080/cache/name
+curl -X DELETE http://localhost:8080/cache/name
 ```
 
-### HTTP API
+## Try A 2-Node Cluster
+
+Start node A:
 
 ```bash
-# Set
-curl -X POST http://localhost:8080/set \
-  -H "Content-Type: application/json" \
-  -d '{"key":"test","value":"hello","ttl":60}'
-
-# Get
-curl "http://localhost:8080/get?key=test"
-
-# Delete
-curl -X DELETE "http://localhost:8080/delete?key=test"
+go run ./cmd/node -addr :8080 -node-id node-a -advertise-addr http://localhost:8080
 ```
 
-## Architecture
+Start node B in another terminal:
 
-- **Cache**: Thread-safe local key-value store
-- **Consistent Hashing**: Distributes keys across nodes with 150 virtual nodes per physical node
-- **Cluster**: Manages node membership
-- **HTTP Protocol**: Simple REST API for operations
+```bash
+go run ./cmd/node -addr :8081 -node-id node-b -advertise-addr http://localhost:8081 -join http://localhost:8080
+```
 
-## License
+Then send requests to either node:
 
-MIT
+```bash
+curl -X PUT http://localhost:8080/cache/name --data "ringg"
+curl http://localhost:8081/cache/name
+curl http://localhost:8080/members
+curl http://localhost:8081/cluster
+```
+
+If the ring says `name` belongs on the other node, the request will be proxied there automatically.
+
+## Planned Next Phases
+
+1. Spread membership with gossip
+2. Rebalance keys when nodes join or leave
