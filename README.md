@@ -65,21 +65,25 @@ go run ./cmd/node -addr :8080 -node-id node-a -advertise-addr http://localhost:8
 Start node B in another terminal:
 
 ```bash
-go run ./cmd/node -addr :8081 -node-id node-b -advertise-addr http://localhost:8081 -join http://localhost:8080
+# Set
+curl -X POST http://localhost:8080/set \
+  -H "Content-Type: application/json" \
+  -d '{"key":"test","value":"hello","ttl":60}'
+
+# Get
+curl "http://localhost:8080/get?key=test"
+
+# Delete
+curl -X DELETE "http://localhost:8080/delete?key=test"
 ```
 
-Then send requests to either node:
+## Architecture
 
-```bash
-curl -X PUT http://localhost:8080/cache/name --data "ringg"
-curl http://localhost:8081/cache/name
-curl http://localhost:8080/members
-curl http://localhost:8081/cluster
-```
+- **Cache**: Thread-safe local key-value store
+- **Consistent Hashing**: Distributes keys across nodes with 150 virtual nodes per physical node
+- **Cluster**: Manages node membership
+- **HTTP Protocol**: Simple REST API for operations
 
-If the ring says `name` belongs on the other node, the request will be proxied there automatically.
+## License
 
-## Planned Next Phases
-
-1. Spread membership with gossip
-2. Rebalance keys when nodes join or leave
+MIT
