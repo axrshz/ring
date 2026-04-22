@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"ringg/internal/cache"
 	"ringg/internal/cluster"
+	"ringg/internal/gossip"
 	"ringg/internal/membership"
 	"ringg/internal/server"
 )
@@ -21,6 +23,7 @@ func main() {
 	advertiseAddr := flag.String("advertise-addr", "http://localhost:8080", "address other nodes should use to reach this node")
 	nodesFlag := flag.String("nodes", "", "comma-separated known nodes in the form node-a=http://localhost:8080,node-b=http://localhost:8081")
 	joinAddr := flag.String("join", "", "optional existing node address to join, for example http://localhost:8080")
+	gossipInterval := flag.Duration("gossip-interval", time.Second, "how often this node should gossip membership updates")
 	flag.Parse()
 
 	state, err := membership.NewState(membership.Member{
@@ -67,8 +70,16 @@ func main() {
 		}
 	}
 
+	go gossip.New(gossip.Config{
+		LocalNodeID: *nodeID,
+		Membership:  state,
+		Client:      client,
+		Interval:    *gossipInterval,
+		MaxPeers:    1,
+	}).Run(context.Background())
+
 	log.Printf(
-		"phase 4 cache node listening on %s as %s with members %s",
+		"phase 5 cache node listening on %s as %s with members %s",
 		*addr,
 		*nodeID,
 		formatMembers(state.Snapshot().Members),

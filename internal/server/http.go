@@ -64,6 +64,7 @@ func (h *Handler) routes() {
 	h.mux.HandleFunc("GET /cluster", h.handleMembers)
 	h.mux.HandleFunc("GET /members", h.handleMembers)
 	h.mux.HandleFunc("POST /members/join", h.handleJoin)
+	h.mux.HandleFunc("POST /members/gossip", h.handleGossip)
 	h.mux.HandleFunc("POST /members/leave", h.handleLeave)
 	h.mux.HandleFunc("GET /cache/{key}", h.handleGet)
 	h.mux.HandleFunc("PUT /cache/{key}", h.handlePut)
@@ -75,6 +76,21 @@ func (h *Handler) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *Handler) handleMembers(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, h.membership.Snapshot())
+}
+
+func (h *Handler) handleGossip(w http.ResponseWriter, r *http.Request) {
+	var snapshot membership.Snapshot
+	if err := json.NewDecoder(r.Body).Decode(&snapshot); err != nil {
+		writeError(w, http.StatusBadRequest, "failed to decode gossip snapshot")
+		return
+	}
+
+	if err := h.membership.MergeSnapshot(snapshot); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	writeJSON(w, http.StatusOK, h.membership.Snapshot())
 }
 

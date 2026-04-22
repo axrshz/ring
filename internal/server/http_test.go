@@ -119,6 +119,50 @@ func TestHandlerJoinAddsMemberAndReturnsSnapshot(t *testing.T) {
 	}
 }
 
+func TestHandlerGossipMergesSnapshot(t *testing.T) {
+	memberState, err := membership.NewState(membership.Member{
+		NodeID: "node-a",
+		Addr:   "http://localhost:8080",
+	})
+	if err != nil {
+		t.Fatalf("expected single-node membership to be valid, got %v", err)
+	}
+
+	server := NewHandler(cache.NewStore(), Options{
+		Membership: memberState,
+	})
+
+	body, err := json.Marshal(membership.Snapshot{
+		LocalNodeID: "node-b",
+		Members: []membership.Member{
+			{
+				NodeID: "node-b",
+				Addr:   "http://localhost:8081",
+				Status: membership.StatusAlive,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected gossip body to marshal, got %v", err)
+	}
+
+	request := httptest.NewRequest(http.MethodPost, "/members/gossip", bytes.NewReader(body))
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected gossip status %d, got %d", http.StatusOK, response.Code)
+	}
+
+	member, ok := memberState.Get("node-b")
+	if !ok {
+		t.Fatal("expected node-b to be present after gossip merge")
+	}
+	if member.Status != membership.StatusAlive {
+		t.Fatalf("expected node-b to be alive after gossip merge, got %q", member.Status)
+	}
+}
+
 func TestHandlerForwardsRequestsToAliveOwnerNode(t *testing.T) {
 	ownerStore := cache.NewStore()
 
