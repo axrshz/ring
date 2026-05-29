@@ -1,6 +1,6 @@
 # ringg
 
-`ringg` is a beginner-friendly distributed cache project in Go.
+`ringg` is a beginner-friendly distributed cache project in Go. still work in progress.
 
 ## Phase 1
 
@@ -94,7 +94,3 @@ To slow gossip down for debugging, you can override the interval:
 ```bash
 go run ./cmd/node -addr :8081 -node-id node-b -advertise-addr http://localhost:8081 -join http://localhost:8080 -gossip-interval 2s
 ```
-
-## Planned Next Phases
-
-1. Rebalance keys when nodes join or leave
