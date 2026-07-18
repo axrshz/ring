@@ -1,54 +1,6 @@
-# ringg
+# ring
 
-`ringg` is a beginner-friendly distributed cache project in Go. still work in progress.
-
-## Phase 1
-
-Phase 1 is a single-node cache with:
-
-- an in-memory key/value store
-- HTTP endpoints for `GET`, `PUT`, and `DELETE`
-- tests for the store and handler
-
-## Phase 2
-
-Phase 2 adds a minimal consistent hash ring:
-
-- add and remove nodes by ID
-- look up which node owns a key
-- tests that show only some keys move when a node joins
-
-This phase is intentionally standalone. The hash ring is not wired into HTTP yet, because that belongs in the next step when we start routing requests between nodes.
-
-## Phase 3
-
-Phase 3 wires the hash ring into the HTTP server:
-
-- every node gets a `node-id`
-- every node starts with the same static cluster map
-- cache requests are forwarded to the owner node when needed
-- `GET /cluster` shows the local node and ring view for debugging
-
-## Phase 4
-
-Phase 4 replaces the fixed cluster config with tracked membership:
-
-- nodes keep a membership table with `alive` and `left` status
-- the ring is rebuilt from the currently alive members
-- `POST /members/join` lets a node announce itself to an existing node
-- `GET /members` shows the current membership snapshot
-
-This phase still does not spread updates automatically. If node A learns about node C, node B will not learn that until we add gossip in the next phase.
-
-## Phase 5
-
-Phase 5 adds a tiny gossip loop:
-
-- nodes periodically send their membership snapshot to a random alive peer
-- peers merge the received snapshot and reply with their own snapshot
-- membership changes now spread automatically without manual joins on every node
-
-This is still a very small version of gossip. It spreads information, but it does not yet do richer failure detection like `suspect` and `dead`.
+`ring` is a distributed cache built in Go for learning purposes.
 
 ## Run
 
