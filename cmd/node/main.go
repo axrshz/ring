@@ -51,7 +51,7 @@ func main() {
 	}
 
 	store := cache.NewStore()
-	client := &http.Client{}
+	client := &http.Client{Timeout: 2 * time.Second}
 	handler := server.NewHandler(store, server.Options{
 		Membership: state,
 		Client:     client,

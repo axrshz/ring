@@ -2,7 +2,9 @@ package gossip
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"ringg/internal/cache"
@@ -60,5 +62,34 @@ func TestSpreadOnceSharesMembershipAndMergesResponse(t *testing.T) {
 
 	if _, ok := localState.Get("node-c"); !ok {
 		t.Fatal("expected local state to learn about node-c from peer gossip response")
+	}
+}
+
+func TestNewInfersLocalNodeIDFromMembership(t *testing.T) {
+	var requests atomic.Int32
+	peerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer peerServer.Close()
+
+	state, err := membership.NewState(membership.Member{
+		NodeID: "node-a",
+		Addr:   peerServer.URL,
+	})
+	if err != nil {
+		t.Fatalf("expected membership creation to succeed, got %v", err)
+	}
+
+	engine := New(Config{
+		Membership: state,
+		Client:     peerServer.Client(),
+	})
+
+	if err := engine.SpreadOnce(context.Background()); err != nil {
+		t.Fatalf("expected single-node gossip to be a no-op, got %v", err)
+	}
+	if requests.Load() != 0 {
+		t.Fatalf("expected gossip to skip the local member, got %d requests", requests.Load())
 	}
 }

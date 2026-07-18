@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"ringg/internal/membership"
@@ -28,10 +30,17 @@ type Engine struct {
 	client      *http.Client
 	interval    time.Duration
 	maxPeers    int
+	rngMu       sync.Mutex
 	rng         *rand.Rand
 }
 
 func New(config Config) *Engine {
+	membershipState := config.Membership
+	localNodeID := strings.TrimSpace(config.LocalNodeID)
+	if localNodeID == "" && membershipState != nil {
+		localNodeID = membershipState.LocalNodeID()
+	}
+
 	client := config.Client
 	if client == nil {
 		client = &http.Client{Timeout: 2 * time.Second}
@@ -48,8 +57,8 @@ func New(config Config) *Engine {
 	}
 
 	return &Engine{
-		localNodeID: config.LocalNodeID,
-		membership:  config.Membership,
+		localNodeID: localNodeID,
+		membership:  membershipState,
 		client:      client,
 		interval:    interval,
 		maxPeers:    maxPeers,
@@ -82,9 +91,11 @@ func (e *Engine) SpreadOnce(ctx context.Context) error {
 		return nil
 	}
 
+	e.rngMu.Lock()
 	e.rng.Shuffle(len(peers), func(i, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
+	e.rngMu.Unlock()
 
 	limit := e.maxPeers
 	if limit > len(peers) {
@@ -133,7 +144,8 @@ func (e *Engine) sendSnapshot(ctx context.Context, targetAddr string, snapshot m
 	}
 
 	var peerSnapshot membership.Snapshot
-	if err := json.NewDecoder(response.Body).Decode(&peerSnapshot); err != nil {
+	decoder := json.NewDecoder(io.LimitReader(response.Body, 1<<20))
+	if err := decoder.Decode(&peerSnapshot); err != nil {
 		return membership.Snapshot{}, fmt.Errorf("decode gossip response: %w", err)
 	}
 
